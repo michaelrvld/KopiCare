@@ -10,7 +10,7 @@ Vercel menjalankan aplikasi PHP ini melalui Docker dan FrankenPHP. File `Dockerf
 2. Jika data XAMPP yang sudah ada ingin dipertahankan, jalankan `php tools/export_mysql_data_for_supabase.php` dari folder proyek lokal. Jalankan file `.private/supabase-data-import.sql` yang dihasilkan melalui SQL Editor Supabase. File tersebut berisi data pengguna dan hash kata sandi; jangan bagikan atau commit file itu.
 3. Di Supabase pilih **Connect**, salin **Transaction pooler** connection string (port `6543`). Aplikasi menggunakan koneksi singkat dan emulasi prepared statement yang kompatibel dengan pooler. Encode karakter khusus di password sesuai format URL.
 4. Buat repository GitHub dan push folder proyek ini. Jangan push file `.env`, folder `.private`, atau connection string.
-5. Di Vercel pilih **Add New → Project**, import repository GitHub, dan pastikan Root Directory menunjuk ke folder yang berisi `Dockerfile`.
+5. Di Vercel pilih **Add New → Project**, import repository GitHub, pastikan Root Directory menunjuk ke folder yang berisi `Dockerfile`, dan gunakan nama project huruf kecil tanpa underscore (misalnya `kopicare`) agar nama image Container Registry valid.
 6. Tambahkan Environment Variables berikut di Vercel untuk **Production** (dan Preview bila dipakai):
 
    - `DB_DRIVER` = `pgsql`
