@@ -1,0 +1,10 @@
+<?php
+require_once __DIR__.'/config.php';
+function e($s){return htmlspecialchars((string)$s,ENT_QUOTES,'UTF-8');}
+function user(){return $_SESSION['user']??null;}
+function admin(){return user()&&user()['role']==='admin';}
+function app_url($path=''){ $script=str_replace('\\','/',$_SERVER['SCRIPT_NAME']??'/'); $dir=rtrim(dirname($script),'/'); if($dir==='.'||$dir==='')$dir=''; if(in_array(basename($dir),['admin','api'],true))$dir=rtrim(dirname($dir),'/'); return $dir.'/'.ltrim($path,'/'); }
+function need_login(){if(!user()){header('Location: '.app_url('login.php'));exit;}}
+function need_admin(){if(!admin()){header('Location: '.app_url('admin/login.php'));exit;}}
+function header_html($title='Coffee Diagnose'){?><!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($title)?> · KopiCare</title><link rel="stylesheet" href="<?=e(app_url('assets/app.css?v='.(string)filemtime(__DIR__.'/assets/app.css')))?>"></head><body><header class="topbar"><a class="brand" href="<?=e(app_url())?>"><span class="brand-mark">☕</span><span>KopiCare<small>Asisten kesehatan tanaman kopi</small></span></a><nav><a href="<?=e(app_url('diagnosis.php'))?>">Diagnosis</a><?php if(user()):?><a href="<?=e(app_url('history.php'))?>">Riwayat saya</a><?php if(admin()):?><a href="<?=e(app_url('admin/index.php'))?>">Panel admin</a><?php endif;?><a class="nav-cta" href="<?=e(app_url('logout.php'))?>">Keluar</a><?php else:?><a href="<?=e(app_url('login.php'))?>">Login</a><a class="nav-cta" href="<?=e(app_url('register.php'))?>">Daftar</a><?php endif;?></nav></header><main class="wrap"><?php }
+function footer_html(){?></main><footer class="footer">KopiCare · Sistem pendukung keputusan awal tanaman kopi Arabika.<br><small>Hasil bukan pengganti pemeriksaan ahli atau laboratorium.</small></footer><script>window.KOPICARE_BASE=<?=json_encode(rtrim(app_url(),'/'))?>;</script><script src="<?=e(app_url('assets/app.js?v='.(string)filemtime(__DIR__.'/assets/app.js')))?>"></script></body></html><?php }

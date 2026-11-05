@@ -1,0 +1,8 @@
+:{$PORT:80} {
+	root * /app
+
+	@private path /config.php /database.sql /supabase.sql /README.md /Dockerfile /Caddyfile /.env /.env.* /.git/*
+	respond @private 404
+
+	php_server
+}

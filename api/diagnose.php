@@ -1,0 +1,18 @@
+<?php
+require_once '../functions.php'; need_login(); header('Content-Type: application/json; charset=utf-8');
+$data=json_decode(file_get_contents('php://input'),true)?:[];
+if(($data['stage']??'')==='specific'){
+ $ids=array_values(array_unique(array_map('intval',$data['symptoms']??[])));if(!$ids){echo json_encode(['error'=>'Pilih minimal satu gejala.']);exit;}
+ $in=implode(',',array_fill(0,count($ids),'?'));
+ $q=$pdo->prepare("SELECT DISTINCT d.id,d.code,d.name,d.description FROM diseases d JOIN rules r ON r.disease_id=d.id WHERE d.active=1 AND r.symptom_id IN ($in) ORDER BY d.code");$q->execute($ids);$diseases=$q->fetchAll();$out=[];
+ foreach($diseases as $d){$q=$pdo->prepare("SELECT s.id,s.code,s.name,s.description,r.cf_expert FROM rules r JOIN symptoms s ON s.id=r.symptom_id WHERE r.disease_id=? AND s.active=1 AND s.category='khusus' ORDER BY s.code");$q->execute([$d['id']]);$d['symptoms']=$q->fetchAll();$out[]=$d;}echo json_encode(['diseases'=>$out]);exit;
+}
+if(($data['stage']??'')!=='calculate'){echo json_encode(['error'=>'Permintaan tidak valid.']);exit;}
+$answers=$data['answers']??[];$gids=array_values(array_unique(array_map('intval',$data['general']??[])));if(!$answers){echo json_encode(['error'=>'Jawab pertanyaan gejala terlebih dahulu.']);exit;}
+$mu=['tidak'=>0,'tidak_yakin'=>0.2,'sedikit_yakin'=>0.4,'cukup_yakin'=>0.6,'yakin'=>0.8,'sangat_yakin'=>1];$results=[];$answerRows=[];
+// Gejala umum yang dicentang menjadi fakta awal dengan CF pengguna = 1.
+if($gids){$in=implode(',',array_fill(0,count($gids),'?'));$q=$pdo->prepare("SELECT r.disease_id,r.cf_expert FROM rules r JOIN diseases d ON d.id=r.disease_id WHERE d.active=1 AND r.symptom_id IN ($in)");$q->execute($gids);foreach($q->fetchAll() as $g){$id=(int)$g['disease_id'];$results[$id]['vals'][]=(float)$g['cf_expert'];}}
+foreach($answers as $a){$sid=(int)($a['symptom_id']??0);$did=(int)($a['disease_id']??0);$v=$a['value']??'tidak';if(!isset($mu[$v]))continue;$q=$pdo->prepare('SELECT s.name,r.cf_expert FROM rules r JOIN symptoms s ON s.id=r.symptom_id WHERE r.disease_id=? AND r.symptom_id=?');$q->execute([$did,$sid]);$r=$q->fetch();if(!$r)continue;$answerRows[]=['name'=>$r['name'],'label'=>str_replace('_',' ',$v)];$cf=$mu[$v]*max(0,(float)$r['cf_expert']);$results[$did]['vals'][]=$cf;$results[$did]['disease_id']=$did;}
+foreach($results as $did=>&$x){$combined=0;foreach($x['vals'] as $v){$combined=$combined+$v*(1-$combined);} $q=$pdo->prepare('SELECT name,description FROM diseases WHERE id=?');$q->execute([$did]);$d=$q->fetch();$x['name']=$d['name'];$x['description']=$d['description'];$x['confidence']=round($combined*100,1);}unset($x);usort($results,fn($a,$b)=>$b['confidence']<=>$a['confidence']);if(!$results){echo json_encode(['error'=>'Tidak cukup aturan untuk menghitung hasil.']);exit;}
+$first=$results[0];$json=json_encode($results,JSON_UNESCAPED_UNICODE);$ans=json_encode($answerRows,JSON_UNESCAPED_UNICODE);$generalNames=[];if($gids){$in=implode(',',array_fill(0,count($gids),'?'));$q=$pdo->prepare("SELECT name FROM symptoms WHERE id IN ($in)");$q->execute($gids);$generalNames=array_column($q->fetchAll(),'name');}
+$sql=$dbDriver==='pgsql'?'INSERT INTO diagnoses(user_id,disease_name,confidence,results_json,answers_json,general_json) VALUES(?,?,?,?,?,?) RETURNING id':'INSERT INTO diagnoses(user_id,disease_name,confidence,results_json,answers_json,general_json) VALUES(?,?,?,?,?,?)';$ins=$pdo->prepare($sql);$ins->execute([user()['id'],$first['name'],$first['confidence'],$json,$ans,json_encode($generalNames,JSON_UNESCAPED_UNICODE)]);$diagnosisId=$dbDriver==='pgsql'?(int)$ins->fetchColumn():(int)$pdo->lastInsertId();echo json_encode(['ok'=>true,'url'=>app_url('print.php').'?id='.$diagnosisId]);

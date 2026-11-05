@@ -1,0 +1,1 @@
+<?php require_once '../functions.php'; need_admin(); ?><div class="admin-nav"><a href="<?=e(app_url('admin/index.php'))?>">Ringkasan</a><a href="<?=e(app_url('admin/gejala.php'))?>">Gejala</a><a href="<?=e(app_url('admin/penyakit.php'))?>">Penyakit</a><a href="<?=e(app_url('admin/rule.php'))?>">Rule / nilai CF</a><a href="<?=e(app_url('admin/logout.php'))?>">Keluar</a></div>

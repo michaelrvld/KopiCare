@@ -1,0 +1,10 @@
+.git
+.private
+tools
+.vercel
+.env*
+README.md
+database.sql
+supabase.sql
+Dockerfile
+.gitignore
